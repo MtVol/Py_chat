@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat IA - FastAPI + OpenRouter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f4f8;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      max-width: 800px;
+      margin: auto;
+      background-color: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .chat-box {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    .user {
+      align-self: flex-end;
+      background-color: #f97316; /* Naranja principal */
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .bot {
+      align-self: flex-start;
+      background-color: #fed7aa; /* Naranja claro para el bot */
+      color: #44403c; /* Texto oscuro para contraste */
+      border-bottom-left-radius: 4px;
+    }
+
+    .input-container {
+      display: flex;
+      padding: 15px;
+      background-color: #fff;
+      border-top: 1px solid #fed7aa;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #fdba74; /* Borde naranja claro */
+      font-size: 16px;
+      background-color: #fff;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+    }
+
+    button {
+      margin-left: 10px;
+      background-color: #f97316;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 15px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #ea580c; /* Naranja más oscuro al pasar el ratón */
+    }
+
+    h1 {
+      text-align: center;
+      padding: 18px;
+      font-size: 1.5em;
+      font-weight: 600;
+      color: #ea580c;
+      margin: 0;
+      background-color: #fff;
+      border-bottom: 1px solid #fed7aa;
+    }
+
+    .controls-container {
+      display: flex;
+      gap: 15px;
+      padding: 10px 15px;
+      background-color: #fff;
+      align-items: center;
+      border-bottom: 1px solid #fed7aa;
+    }
+
+    .controls-container select, .controls-container input {
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #fdba74;
+      background-color: #fff;
+    }
+
+    .controls-container label {
+      font-weight: 500;
+      color: #78350f; /* Naranja oscuro para etiquetas */
+    }
+
+    #context-file-group {
+      display: none; /* Oculto por defecto */
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <h1>💬 Asistente IA</h1>
+    <div id="chat-box" class="chat-box"></div>
+
+    <div class="controls-container">
+      <label for="chat-mode">Modo:</label>
+      <select id="chat-mode" onchange="toggleMode()">
+        <option value="normal">Chat Normal</option>
+        <option value="rag">Chat con Contexto (RAG)</option>
+      </select>
+      <div id="context-file-group">
+        <label for="context-file-input" style="margin-left: 15px; margin-right: 5px;">Archivo:</label>
+        <input type="file" id="context-file-input">
+      </div>
+    </div>
+
+    <div class="input-container">
+      <input type="text" id="user-input" placeholder="Escribe un mensaje..." />
+      <button onclick="sendMessage()">Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = "http://127.0.0.1:8000";
+
+    function toggleMode() {
+      const mode = document.getElementById("chat-mode").value;
+      const contextGroup = document.getElementById("context-file-group");
+      if (mode === 'rag') {
+        contextGroup.style.display = 'flex';
+      } else {
+        contextGroup.style.display = 'none';
+      }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById("user-input");
+      const chatBox = document.getElementById("chat-box");
+      const mode = document.getElementById("chat-mode").value;
+
+      const message = input.value.trim();
+      if (!message) return;
+
+      let endpoint;
+      let requestBody;
+      let requestHeaders = { "Content-Type": "application/json" };
+
+      if (mode === 'rag') {
+        endpoint = `${API_BASE_URL}/rag-chat`;
+        const fileInput = document.getElementById("context-file-input");
+        if (fileInput.files.length === 0) {
+          alert("Por favor, selecciona un archivo de contexto para el modo RAG.");
+          return;
+        }
+        const formData = new FormData();
+        formData.append("message", message);
+        formData.append("context_file", fileInput.files[0]);
+        requestBody = formData;
+        delete requestHeaders['Content-Type']; // El navegador establece el boundary
+      } else {
+        endpoint = `${API_BASE_URL}/ai-chat`;
+        requestBody = JSON.stringify({ message });
+      }
+
+      // Mostrar mensaje del usuario
+      const userMsg = document.createElement("div");
+      userMsg.className = "message user";
+      userMsg.textContent = message;
+      chatBox.appendChild(userMsg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      input.value = "";
+
+      // Llamar al backend
+      const responseMsg = document.createElement("div");
+      responseMsg.className = "message bot";
+      responseMsg.textContent = "Escribiendo...";
+      chatBox.appendChild(responseMsg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: requestHeaders,
+          body: requestBody,
+        });
+
+        const data = await response.json();
+        responseMsg.textContent = data.response || "Error al obtener respuesta";
+      } catch (error) {
+        responseMsg.textContent = "❌ Error en la conexión con el servidor.";
+      }
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Enviar con Enter
+    document.getElementById("user-input").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
+  </script>
+</body>
+</html>
