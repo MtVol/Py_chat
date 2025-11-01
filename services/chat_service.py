@@ -1,20 +1,11 @@
 from schemas.chat_shemas import InputMensage
 from openai import OpenAI
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
-client = OpenAI(
-    api_key=os.getenv("OPENROUTE_API_KEY"),
-    base_url=os.getenv("OPENAI_API_BASE")
-)
-
-
-def get_chat_response(data_in: InputMensage):
+def get_chat_response(data_in: InputMensage, client: OpenAI):
     data = data_in.model_dump()
     message = data['message']
     try:
-        completion = client.chat.completions.create(
+        completion = client.chat.completions.create( # Usa el cliente recibido
             model="openai/gpt-oss-20b:free",
             messages=[
                 {

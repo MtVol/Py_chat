@@ -1,39 +1,21 @@
 from openai import OpenAI
 from fastapi import UploadFile
-import os
 import fitz  # PyMuPDF
 import io
-from dotenv import load_dotenv
-
-load_dotenv()
 
 class RAGService:
-    def __init__(self):
-        self.client = OpenAI(
-            api_key=os.getenv("OPENROUTE_API_KEY"),
-            base_url=os.getenv("OPENAI_API_BASE")
-        )
-
-    async def process_rag_query(self, message: str, context_file: UploadFile) -> str:
+    async def process_rag_query(
+        self,
+        message: str,
+        context_file: UploadFile | None,
+        client: OpenAI
+    ) -> str:
         try:
-            context = ""
-            content = await context_file.read()
-
-            # --- NUEVO: Procesar el archivo según su tipo (PDF o Texto) ---
-            if context_file.content_type == 'application/pdf':
-                # Es un PDF, usamos PyMuPDF para extraer texto
-                pdf_document = fitz.open(stream=io.BytesIO(content))
-                for page in pdf_document:
-                    context += page.get_text()
-                pdf_document.close()
-            else:
-                # Asumimos que es un archivo de texto plano
-                try:
-                    # Intenta decodificar como UTF-8 primero
-                    context = content.decode('utf-8')
-                except UnicodeDecodeError:
-                    # Si falla, intenta con 'latin-1'
-                    context = content.decode('latin-1')
+            # Si no hay archivo, el contexto está vacío
+            if not context_file:
+                return "Error: Se requiere un archivo de contexto para esta operación."
+            
+            context = await self._extract_text_from_file(context_file)
 
             # --- NUEVO: Truncar el contexto para evitar exceder el límite de tokens ---
             # El límite de tokens es ~130k. Usemos un límite de caracteres seguro.
@@ -53,7 +35,7 @@ Pregunta del usuario:
             {message}"""
 
             # Call OpenAI API
-            completion = self.client.chat.completions.create(
+            completion = client.chat.completions.create(
                 model="openai/gpt-oss-20b:free",
                 messages=[
                     {"role": "system", "content": "Eres un asistente útil y creativo que ayuda a los usuarios a responder preguntas y resolver problemas en español de manera concisa, basándote en el contexto proporcionado."},
@@ -68,10 +50,26 @@ Pregunta del usuario:
                 return response
             return "Error: No se recibió una respuesta válida del modelo."
 
-        except FileNotFoundError:
-            return "Error: The specified context file was not found."
-        except UnicodeDecodeError:
-            return "Error: The context file is not encoded in UTF-8. Please use a UTF-8 encoded file."
         except Exception as e:
             print(f"Error: {e}")
             return "Error:"
+
+    async def _extract_text_from_file(self, file: UploadFile) -> str:
+        """Helper para extraer texto de archivos PDF o de texto plano."""
+        content = await file.read()
+        context = ""
+
+        if file.content_type == 'application/pdf':
+            # Es un PDF, usamos PyMuPDF para extraer texto
+            pdf_document = fitz.open(stream=io.BytesIO(content))
+            for page in pdf_document:
+                context += page.get_text()
+            pdf_document.close()
+        else:
+            # Asumimos que es un archivo de texto plano
+            try:
+                context = content.decode('utf-8')
+            except UnicodeDecodeError:
+                context = content.decode('latin-1')
+        
+        return context
