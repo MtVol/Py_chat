@@ -8,7 +8,7 @@ app = FastAPI()
 # 🔹 Habilitar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # o ["http://127.0.0.1:5500"] si usas Live Server
+    allow_origins=["*"],  # o ["https://pyiot.onrender.com/"] si usas Live Server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
