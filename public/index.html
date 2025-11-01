@@ -4,15 +4,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chat IA - FastAPI + OpenRouter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg-dark: #0D1117;
+      --bg-medium: #161B22;
+      --border-color: #30363D;
+      --text-light: #e6edf3;
+      --text-medium: #8b949e;
+      --orange-glow: #f97316;
+      --orange-dark: #ea580c;
+      --orange-shadow: rgba(249, 115, 22, 0.3);
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f0f4f8;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-dark);
       margin: 0;
       padding: 0;
       display: flex;
       flex-direction: column;
       height: 100vh;
+      color: var(--text-light);
     }
 
     .chat-container {
@@ -21,10 +36,12 @@
       flex-direction: column;
       justify-content: space-between;
       max-width: 800px;
+      width: 95%;
       margin: auto;
-      background-color: #ffffff;
+      background-color: var(--bg-medium);
       border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 0 40px var(--orange-shadow);
       overflow: hidden;
     }
 
@@ -34,106 +51,171 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 15px;
+    }
+
+    /* Estilo de la barra de scroll */
+    .chat-box::-webkit-scrollbar {
+      width: 8px;
+    }
+    .chat-box::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .chat-box::-webkit-scrollbar-thumb {
+      background-color: var(--border-color);
+      border-radius: 10px;
+      border: 2px solid var(--bg-medium);
+    }
+    .chat-box::-webkit-scrollbar-thumb:hover {
+      background-color: var(--orange-glow);
     }
 
     .message {
       max-width: 70%;
       padding: 12px 16px;
       border-radius: 18px;
-      line-height: 1.4;
+      line-height: 1.5;
       white-space: pre-wrap;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .user {
       align-self: flex-end;
-      background-color: #f97316;
+      background-color: var(--orange-glow);
       color: white;
       border-bottom-right-radius: 4px;
+      box-shadow: 0 0 15px rgba(249, 115, 22, 0.4);
     }
 
     .bot {
       align-self: flex-start;
-      background-color: #fed7aa;
-      color: #44403c;
+      background-color: #21262d;
+      color: var(--text-light);
       border-bottom-left-radius: 4px;
+      border: 1px solid var(--border-color);
     }
 
     .input-container {
       display: flex;
       padding: 15px;
-      background-color: #fff;
-      border-top: 1px solid #fed7aa;
+      background-color: var(--bg-dark);
+      align-items: center;
+      border-top: 1px solid var(--border-color);
     }
 
     input[type="text"] {
       flex: 1;
-      padding: 10px;
+      padding: 12px;
       border-radius: 8px;
-      border: 1px solid #fdba74;
+      border: 1px solid var(--border-color);
       font-size: 16px;
-      background-color: #fff;
+      background-color: var(--bg-medium);
+      color: var(--text-light);
+      font-family: 'Roboto Mono', monospace;
       transition: border-color 0.3s, box-shadow 0.3s;
     }
 
     input[type="text"]:focus {
       outline: none;
-      border-color: #f97316;
-      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+      border-color: var(--orange-glow);
+      box-shadow: 0 0 10px var(--orange-shadow);
     }
 
     button {
       margin-left: 10px;
-      background-color: #f97316;
+      flex-shrink: 0; /* Evita que el botón se encoja */
+      background-color: var(--orange-glow);
       color: white;
       border: none;
       border-radius: 8px;
-      padding: 10px 15px;
+      padding: 12px 20px;
       font-size: 16px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
-      transition: background-color 0.3s;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 0 15px var(--orange-shadow);
     }
 
     button:hover {
-      background-color: #ea580c;
+      background-color: var(--orange-dark);
+      box-shadow: 0 0 25px var(--orange-shadow);
+      transform: translateY(-2px);
     }
 
     h1 {
       text-align: center;
       padding: 18px;
       font-size: 1.5em;
-      font-weight: 600;
-      color: #ea580c;
-      margin: 0;
-      background-color: #fff;
-      border-bottom: 1px solid #fed7aa;
-    }
-
-    .controls-container {
-      display: flex;
-      gap: 15px;
-      padding: 10px 15px;
-      background-color: #fff;
-      align-items: center;
-      border-bottom: 1px solid #fed7aa;
-    }
-
-    .controls-container select, .controls-container input {
-      padding: 8px;
-      border-radius: 8px;
-      border: 1px solid #fdba74;
-      background-color: #fff;
-    }
-
-    .controls-container label {
       font-weight: 500;
-      color: #78350f;
+      color: var(--orange-glow);
+      margin: 0;
+      background-color: var(--bg-medium);
+      border-bottom: 1px solid var(--border-color);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px var(--orange-shadow);
     }
 
-    #context-file-group {
-      display: none;
+    /* Estilo para el placeholder del input de archivo */
+    input[type="file"]::file-selector-button {
+      background-color: var(--bg-dark);
+      color: var(--text-light);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    input[type="file"]::file-selector-button:hover {
+      background-color: var(--border-color);
+      border-color: var(--orange-glow);
+    }
+
+    /* --- NUEVOS ESTILOS PARA INTERFAZ UNIFICADA --- */
+    .file-upload-btn {
+      flex-shrink: 0;
+      cursor: pointer;
+      padding: 8px;
+      margin-right: 10px;
+      border-radius: 50%;
+      display: flex;
       align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s;
+    }
+    .file-upload-btn:hover {
+      background-color: var(--border-color);
+    }
+    .file-upload-btn svg {
+      width: 24px;
+      height: 24px;
+      stroke: var(--text-medium);
+      transition: stroke 0.3s;
+    }
+    .file-upload-btn:hover svg {
+      stroke: var(--orange-glow);
+    }
+
+    .file-info-container {
+      padding: 5px 15px;
+      background-color: var(--bg-dark);
+      font-size: 0.8em;
+      color: var(--text-medium);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .clear-file-btn {
+      cursor: pointer;
+      color: var(--orange-glow);
+      font-weight: bold;
     }
   </style>
 </head>
@@ -141,38 +223,32 @@
   <div class="chat-container">
     <h1>💬 Asistente IA</h1>
     <div id="chat-box" class="chat-box"></div>
-
-    <div class="controls-container">
-      <label for="chat-mode">Modo:</label>
-      <select id="chat-mode" onchange="toggleMode()">
-        <option value="normal">Chat Normal</option>
-        <option value="rag">Chat con Contexto (RAG)</option>
-      </select>
-      <div id="context-file-group">
-        <label for="context-file-input" style="margin-left: 15px; margin-right: 5px;">Archivo:</label>
-        <input type="file" id="context-file-input">
-      </div>
-    </div>
+    
+    <div id="file-info-container" class="file-info-container" style="display: none;"></div>
 
     <div class="input-container">
+      <!-- Botón para adjuntar archivo -->
+      <label for="file-input" class="file-upload-btn" title="Adjuntar archivo de contexto">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+        </svg>
+      </label>
+      <input type="file" id="file-input" style="display: none;">
+
       <input type="text" id="user-input" placeholder="Escribe un mensaje..." />
       <button onclick="sendMessage()">Enviar</button>
     </div>
   </div>
 
   <script>
-    const API_BASE_URL = "https://pyiot.onrender.com/rag-chat";
-
-    function toggleMode() {
-      const mode = document.getElementById("chat-mode").value;
-      const contextGroup = document.getElementById("context-file-group");
-      contextGroup.style.display = mode === 'rag' ? 'flex' : 'none';
-    }
+    // Asegúrate que esta URL sea la correcta para tu backend
+    // Si estás probando en local, usa: "http://127.0.0.1:8000"
+    const API_BASE_URL = "http://127.0.0.1:8000"; 
 
     async function sendMessage() {
       const input = document.getElementById("user-input");
       const chatBox = document.getElementById("chat-box");
-      const mode = document.getElementById("chat-mode").value;
+      const fileInput = document.getElementById("file-input");
       const message = input.value.trim();
       if (!message) return;
 
@@ -196,21 +272,16 @@
       let requestHeaders = { "Content-Type": "application/json" };
 
       try {
-        if (mode === 'rag') {
-          endpoint = `${API_BASE_URL}/rag/chat`;
-          const fileInput = document.getElementById("context-file-input");
-          if (fileInput.files.length === 0) {
-            alert("Por favor, selecciona un archivo de contexto para el modo RAG.");
-            responseMsg.remove();
-            return;
-          }
+        // Decide el endpoint basado en si hay un archivo seleccionado
+        if (fileInput && fileInput.files.length > 0) {
+          endpoint = `${API_BASE_URL}/rag/chat`; // Endpoint RAG
           const formData = new FormData();
           formData.append("message", message);
           formData.append("context_file", fileInput.files[0]);
           requestBody = formData;
           delete requestHeaders["Content-Type"];
         } else {
-          endpoint = `${API_BASE_URL}/ai-chat`; // Ruta futura para chat normal si lo implementas
+          endpoint = `${API_BASE_URL}/ai-chat`; // Endpoint de chat normal
           requestBody = JSON.stringify({ message });
         }
 
@@ -222,6 +293,10 @@
 
         const data = await response.json();
         responseMsg.textContent = data.response || "Error al obtener respuesta.";
+
+        // Limpiar el archivo después de enviarlo para el siguiente mensaje
+        clearFile();
+
       } catch (error) {
         responseMsg.textContent = "❌ Error en la conexión con el servidor.";
       }
@@ -229,10 +304,30 @@
       chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    // Enviar con Enter
     document.getElementById("user-input").addEventListener("keypress", (e) => {
       if (e.key === "Enter") sendMessage();
     });
+
+    document.getElementById("file-input").addEventListener("change", (e) => {
+      const fileInfoContainer = document.getElementById("file-info-container");
+      if (e.target.files.length > 0) {
+        const fileName = e.target.files[0].name;
+        fileInfoContainer.innerHTML = `
+          <span>Archivo adjunto: <strong>${fileName}</strong></span>
+          <span class="clear-file-btn" onclick="clearFile()" title="Quitar archivo">✖</span>
+        `;
+        fileInfoContainer.style.display = 'flex';
+      } else {
+        fileInfoContainer.style.display = 'none';
+      }
+    });
+
+    function clearFile() {
+      const fileInput = document.getElementById("file-input");
+      fileInput.value = ""; // Esto limpia la selección de archivo
+      document.getElementById("file-info-container").style.display = 'none';
+    }
   </script>
 </body>
+
 </html>
